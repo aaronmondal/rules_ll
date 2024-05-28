@@ -24,6 +24,8 @@ def compile_object_tools(ctx):
         toolchain.offload_packager,
         toolchain.opt,
         toolchain.symbolizer,
+        toolchain.cpp_driver,
+        toolchain.c_driver,
     ]
 
 def linking_tools(ctx):

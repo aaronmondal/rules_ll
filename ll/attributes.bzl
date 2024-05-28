@@ -8,6 +8,7 @@ load("//ll:llvm_project_deps.bzl", "LLVM_PROJECT_DEPS")
 load("//ll:providers.bzl", "LlInfo")
 load(
     "//ll:transitions.bzl",
+    "COMPILATION_MODES",
     "transition_to_bootstrap",
     "transition_to_cpp",
 )
@@ -25,20 +26,15 @@ DEFAULT_ATTRS = {
 
         `"cuda_nvptx"` The CUDA toolchain.
 
+        `"cuda_nvptx_nvcc"` The CUDA toolchain with `nvcc` as device compiler.
+
         `"hip_nvptx"` The HIP toolchain.
 
         `"bootstrap"` The bootstrap toolchain used by internal dependencies of
         the `ll_toolchain`.
         """,
         default = "cpp",
-        # TODO: hip_amd, sycl_amd
-        values = [
-            "cpp",
-            "cuda_nvptx",
-            "hip_amdgpu",
-            "hip_nvptx",
-            "bootstrap",
-        ],
+        values = COMPILATION_MODES,
     ),
     "compile_flags": attr.string_list(
         doc = """Flags for the compiler.
@@ -289,6 +285,13 @@ LIBRARY_ATTRS = {
 
         Used if `emit` includes `"shared_object"`.
         """,
+    ),
+    "version_script": attr.label(
+        doc = """Optional version script used during shared object linking.
+
+        Used if `emit` includes `"shared_object"`.
+        """,
+        allow_single_file = True,
     ),
     "shared_object_link_string_flags": attr.label_list(
         doc = """Flags for the linker when emitting shared objects in the form
@@ -599,6 +602,25 @@ LL_TOOLCHAIN_ATTRS = {
         doc = """The path to the CUDA driver.
 
         Affects the `cuda_nvptx` and `hip_nvptx` toolchains.
+        """,
+    ),
+    "LL_CUDA_NVCC": attr.label(
+        doc = """The path to the `nvcc` compiler.
+
+        Affects the `cuda_nvptx_nvcc` toolchain. Other `*_nvptx` toolchains use
+        the `c_driver` or `cpp_driver` as CUDA compiler.
+        """,
+    ),
+    "LL_STDCXX_INCLUDES": attr.label(
+        doc = """The path to `libstdc++` headers.
+
+        Affects the `cuda_nvptx_nvcc` toolchain. Other toolchains use `libc++`.
+        """,
+    ),
+    "LL_STDCXX_LIBRARIES": attr.label(
+        doc = """The path to the `libstdc++` library.
+
+        Affects the `cuda_nvptx_nvcc` toolchain. Other toolchains use libc++.
         """,
     ),
 }

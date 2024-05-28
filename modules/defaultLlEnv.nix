@@ -6,7 +6,8 @@
   # variants don't work.
 , llvmPackages ? pkgs.llvmPackages_17
 , nvidia_x11 ? pkgs.linuxKernel.packages.linux_latest_libre.nvidia_x11
-, cudatoolkit ? pkgs.cudaPackages.cudatoolkit
+, cudatoolkit ? pkgs.cudaPackages_12_4.cudatoolkit
+, nvcc ? pkgs.cudaPackages_12_4.cuda_nvcc
 , ...
 }:
 
@@ -76,4 +77,9 @@ in
   "LL_CUDA_TOOLKIT=${lib.strings.optionalString pkgs.config.cudaSupport "${cudatoolkit}"}"
   "LL_CUDA_RUNTIME=${lib.strings.optionalString pkgs.config.cudaSupport "${cudatoolkit.lib}"}"
   "LL_CUDA_DRIVER=${lib.strings.optionalString pkgs.config.cudaSupport "${nvidia_x11}"}"
+  "LL_CUDA_NVCC=${lib.strings.optionalString pkgs.config.cudaSupport "${nvcc}"}"
+
+  # TODO(aaronmondal): Surely there must be a less hacky solution.
+  "LL_STDCXX_INCLUDES=${lib.strings.optionalString pkgs.config.cudaSupport "${pkgs.gcc.cc}/include/c++/13.2.0"}"
+  "LL_STDCXX_LIBRARIES=${lib.strings.optionalString pkgs.config.cudaSupport "${pkgs.gcc.cc}/lib"}"
 ]

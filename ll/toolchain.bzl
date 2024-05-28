@@ -72,6 +72,9 @@ def _ll_toolchain_impl(ctx):
             LL_CUDA_TOOLKIT = ctx.attr.LL_CUDA_TOOLKIT[BuildSettingInfo].value,
             LL_CUDA_RUNTIME = ctx.attr.LL_CUDA_RUNTIME[BuildSettingInfo].value,
             LL_CUDA_DRIVER = ctx.attr.LL_CUDA_DRIVER[BuildSettingInfo].value,
+            LL_CUDA_NVCC = ctx.attr.LL_CUDA_NVCC[BuildSettingInfo].value,
+            LL_STDCXX_INCLUDES = ctx.attr.LL_STDCXX_INCLUDES[BuildSettingInfo].value,
+            LL_STDCXX_LIBRARIES = ctx.attr.LL_STDCXX_LIBRARIES[BuildSettingInfo].value,
         ),
     ]
 

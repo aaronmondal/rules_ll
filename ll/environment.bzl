@@ -30,7 +30,9 @@ def compile_object_environment(ctx):
                 toolchain.linker_executable.dirname,
             ]),
         }
-    elif config in ["cuda_nvptx", "hip_amdgpu", "hip_nvptx"]:
+        # TODO(aaronmondal): This can be specialized a bit more.
+
+    elif config in ["cuda_nvptx", "hip_amdgpu", "hip_nvptx", "cuda_nvptx_nvcc"]:
         return {
             "CLANG_OFFLOAD_BUNDLER": toolchain.offload_bundler.path,
             "LINK": toolchain.bitcode_linker.path,
@@ -42,6 +44,8 @@ def compile_object_environment(ctx):
                 toolchain.objcopy.dirname,  # Offload-bundler looks here.
             ]),
             "HIPSCYL_DEBUG_LEVEL": "4",
+            # "CUDA_PATH": toolchain.LL_CUDA_TOOLKIT,
+            # "CUDA_HOME": toolchain.LL_CUDA_TOOLKIT,
         }
     elif config == "bootstrap":
         return {

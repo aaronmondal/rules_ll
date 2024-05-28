@@ -68,12 +68,22 @@
           , ...
           }:
           {
-            _module.args.pkgs = import self.inputs.nixpkgs {
-              inherit system;
-              # CUDA support
-              config.allowUnfree = true;
-              config.cudaSupport = true;
-            };
+            _module.args.pkgs =
+              let
+                nixpkgs-patched = (import self.inputs.nixpkgs { inherit system; }).applyPatches {
+                  name = "nixpkgs-patched";
+                  src = self.inputs.nixpkgs;
+                  # TODO(aaronmondal): Remove when this patch is merged upstream.
+                  patches = [ ./patches/nixpkgs_cuda_12_4_1.diff ];
+                };
+              in
+              import nixpkgs-patched {
+                inherit system;
+
+                # CUDA support
+                config.allowUnfree = true;
+                config.cudaSupport = true;
+              };
             local-remote-execution.settings = {
               inherit (nativelink.packages.${system}.lre-cc.meta) Env;
             };

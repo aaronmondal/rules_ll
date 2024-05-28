@@ -120,6 +120,11 @@ def compile_object_args(
 
     args = ctx.actions.args()
 
+    if ctx.attr.compilation_mode == "cuda_nvptx_nvcc":
+        args.add("--forward-unknown-to-host-compiler")
+        args.add("--compiler-bindir")
+        args.add(toolchain.cpp_driver)
+
     args.add("-fcolor-diagnostics")
 
     # Reproducibility.
@@ -221,12 +226,28 @@ def compile_object_args(
 
     if ctx.attr.compilation_mode in [
         "cuda_nvptx",
+        # "cuda_nvptx_nvcc",
         "hip_nvptx",
     ]:
         args.add("-Wno-unknown-cuda-version")  # Will always be unknown.
         args.add("-xcuda")
         if toolchain.LL_CUDA_TOOLKIT != "":
             args.add(toolchain.LL_CUDA_TOOLKIT, format = "--cuda-path=%s")
+
+    if ctx.attr.compilation_mode in [
+        "cuda_nvptx_nvcc",
+    ]:
+        args.add("--x")
+        args.add("cu")
+        args.add("--allow-unsupported-compiler")
+
+        # CUDA prevents the use of libc++ by default. We know what we're doing.
+        args.add("-D_ALLOW_UNSUPPORTED_LIBCPP")
+
+        args.add("--cuda-host-only")  # Make sure clang doesn't build device code.
+        if toolchain.LL_CUDA_TOOLKIT != "":
+            args.add(toolchain.LL_CUDA_TOOLKIT, format = "-I=%s/include")
+
     if ctx.attr.compilation_mode in ["hip_nvptx", "hip_amdgpu"]:
         args.add_all(
             [
@@ -275,23 +296,30 @@ def compile_object_args(
 
         # 3. Search directories specified via -isystem for quoted and angled
         #    includes. This is not exposed via target attributes.
-        llvm_workspace_root = Label("@llvm-project").workspace_root
-        args.add_all(
-            [
-                # TODO: Ugly. Find a better solution.
-                paths.join(
-                    ctx.var["GENDIR"],  # For __config_site
-                    llvm_workspace_root,
-                    "libcxx/include",
-                ),
-                paths.join(llvm_workspace_root, "libcxx/include"),
-                paths.join(llvm_workspace_root, "libcxxabi/include"),
-                paths.join(llvm_workspace_root, "libunwind/include"),
-            ],
-            # Force removal of the previous -I includes and adjust them to
-            # become system includes.
-            format_each = "-isystem%s",
-        )
+        if ctx.attr.compilation_mode != "cuda_nvptx_nvcc":
+            llvm_workspace_root = Label("@llvm-project").workspace_root
+            args.add_all(
+                [
+                    # TODO: Ugly. Find a better solution.
+                    paths.join(
+                        ctx.var["GENDIR"],  # For __config_site
+                        llvm_workspace_root,
+                        "libcxx/include",
+                    ),
+                    paths.join(llvm_workspace_root, "libcxx/include"),
+                    paths.join(llvm_workspace_root, "libcxxabi/include"),
+                    paths.join(llvm_workspace_root, "libunwind/include"),
+                ],
+                # Force removal of the previous -I includes and adjust them to
+                # become system includes.
+                format_each = "-isystem%s",
+            )
+        else:
+            # The `nvcc` compiler sets feature flags that it doesn't actually
+            # support. This breaks compilation with libc++ and we need to fall
+            # back to libstdc++.
+            args.add(toolchain.LL_STDCXX_INCLUDES, format = "-isystem%s")
+            args.add(toolchain.LL_STDCXX_INCLUDES, format = "-isystem%s/x86_64-unknown-linux-gnu")
         if toolchain.LL_CFLAGS != "":
             args.add_all(toolchain.LL_CFLAGS.split(":"))
 
@@ -482,8 +510,15 @@ def link_executable_args(ctx, in_files, out_file, mode):
 
     if ctx.attr.compilation_mode in [
         "cuda_nvptx",
+        "cuda_nvptx_nvcc",
         "hip_nvptx",
     ]:
+        # Both the CUDA driver and the CUDA toolkit contain `libcuda.so`.
+        # Link against `<cudatoolkit>/lib/libcuda.so` at build time, but make
+        # sure that `<cudadriver>/lib/libcuda.so` takes precedence at runtime.
+        if toolchain.LL_CUDA_DRIVER != "":
+            args.add(toolchain.LL_CUDA_DRIVER, format = "-rpath=%s/lib")
+
         for location in [toolchain.LL_CUDA_TOOLKIT, toolchain.LL_CUDA_RUNTIME]:
             if location != "":
                 args.add(location, format = "-rpath=%s/lib")
@@ -491,12 +526,19 @@ def link_executable_args(ctx, in_files, out_file, mode):
 
                 # TODO: Not pretty. With the right nix packages we can probably
                 #       do this more elegantly.
-                args.add(location, format = "-rpath=%s/lib/stubs")
                 args.add(location, format = "-L%s/lib/stubs")
 
-        args.add("-lcuda")
+                # Link against `<cudatoolkit>/lib/stubs/libcuda.so`, but set the
+                # RPATH to `<cudaDriver>/lib/libcuda.so`.
+                # args.add(location, format = "-rpath=%s/lib/stubs")
+
+        # args.add("-lcudadevrt")
         args.add("-lcudart_static")
-        args.add("-lcupti_static")
+
+        # args.add("-lcuda")
+        # args.add("-lcudart_static")
+        # args.add("-lcupti_static")
+
     if ctx.attr.compilation_mode == "hip_amdgpu":
         args.add(toolchain.hip_runtime[0].dirname, format = "-L%s")
         args.add(toolchain.hip_runtime[0].basename, format = "-l:%s")
@@ -525,6 +567,8 @@ def link_executable_args(ctx, in_files, out_file, mode):
         args.add_all(ctx.attr.shared_object_link_flags)
         for flags in ctx.attr.shared_object_link_string_flags:
             args.add_all(flags[BuildSettingInfo].value.split(":"))
+        if ctx.file.version_script != None:
+            args.add(ctx.file.version_script, format = "--version-script=%s")
     else:
         fail("Invalid linking mode")
 
@@ -552,6 +596,10 @@ def link_executable_args(ctx, in_files, out_file, mode):
     # ]
 
     args.add_all(link_files)
+
+    if ctx.attr.compilation_mode == "cuda_nvptx_nvcc":
+        args.add(toolchain.LL_STDCXX_LIBRARIES, format = "-L%s")
+        args.add("-lstdc++")
 
     # Link shared libraries in a way that is accessible via `bazel run` and
     # via manual execution, as long as the relative paths to the shared

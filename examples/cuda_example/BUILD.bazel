@@ -1,11 +1,22 @@
 load("@rules_ll//ll:defs.bzl", "OFFLOAD_ALL_NVPTX", "ll_binary", "ll_test")
 
+# ll_binary(
+#     name = "cuda_example",
+#     srcs = ["example.cpp"],
+#     compilation_mode = "cuda_nvptx",
+#     compile_flags = OFFLOAD_ALL_NVPTX + [
+#         "--std=c++20",
+#     ],
+#     visibility = ["@//:__pkg__"],
+# )
+
 ll_binary(
     name = "cuda_example",
     srcs = ["example.cpp"],
-    compilation_mode = "cuda_nvptx",
-    compile_flags = OFFLOAD_ALL_NVPTX + [
-        "--std=c++20",
+    compilation_mode = "cuda_nvptx_nvcc",
+    compile_flags = [
+        # NVCC doesn't support C++20.
+        "--std=c++17",
     ],
     visibility = ["@//:__pkg__"],
 )

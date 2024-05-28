@@ -96,6 +96,9 @@ string_flag(
         "LL_CUDA_TOOLKIT",
         "LL_CUDA_RUNTIME",
         "LL_CUDA_DRIVER",
+        "LL_CUDA_NVCC",
+        "LL_STDCXX_INCLUDES",
+        "LL_STDCXX_LIBRARIES",
 
         # Unset values default to an empty string.
         "LL_UNSET",
@@ -123,20 +126,34 @@ ll_toolchain(
     LL_CUDA_DRIVER = select({
         ":hip_nvptx": ":LL_CUDA_DRIVER",
         ":cuda_nvptx": ":LL_CUDA_DRIVER",
+        ":cuda_nvptx_nvcc": ":LL_CUDA_DRIVER",
         "//conditions:default": "LL_UNSET",
+    }),
+    LL_CUDA_NVCC = select({
+        ":cuda_nvptx_nvcc": ":LL_CUDA_NVCC",
+        "//conditions:default": ":LL_UNSET",
     }),
     LL_CUDA_RUNTIME = select({
         ":hip_nvptx": ":LL_CUDA_RUNTIME",
         ":cuda_nvptx": ":LL_CUDA_RUNTIME",
-        "//conditions:default": "LL_UNSET",
+        "//conditions:default": ":LL_UNSET",
     }),
     LL_CUDA_TOOLKIT = select({
         ":hip_nvptx": ":LL_CUDA_TOOLKIT",
         ":cuda_nvptx": ":LL_CUDA_TOOLKIT",
+        ":cuda_nvptx_nvcc": ":LL_CUDA_TOOLKIT",
         "//conditions:default": ":LL_UNSET",
     }),
     LL_DYNAMIC_LINKER = ":LL_DYNAMIC_LINKER",
     LL_LDFLAGS = "@rules_ll//ll:LL_LDFLAGS",
+    LL_STDCXX_INCLUDES = select({
+        ":cuda_nvptx_nvcc": ":LL_STDCXX_INCLUDES",
+        "//conditions:default": ":LL_UNSET",
+    }),
+    LL_STDCXX_LIBRARIES = select({
+        ":cuda_nvptx_nvcc": ":LL_STDCXX_LIBRARIES",
+        "//conditions:default": ":LL_UNSET",
+    }),
     address_sanitizer = select({
         ":bootstrap": [],
         "//conditions:default": [
@@ -154,18 +171,22 @@ ll_toolchain(
     }),
     cpp_abihdrs = select({
         ":bootstrap": None,
+        ":cuda_nvptx_nvcc": None,
         "//conditions:default": "@llvm-project//libcxxabi:headers",
     }),
     cpp_abilib = select({
         ":bootstrap": None,
+        ":cuda_nvptx_nvcc": None,
         "//conditions:default": "@llvm-project//libcxxabi",
     }),
     cpp_stdhdrs = select({
         ":bootstrap": None,
+        ":cuda_nvptx_nvcc": None,
         "//conditions:default": "@llvm-project//libcxx:headers",
     }),
     cpp_stdlib = select({
         ":bootstrap": None,
+        ":cuda_nvptx_nvcc": None,
         "//conditions:default": "@llvm-project//libcxx",
     }),
     exec_compatible_with = [
