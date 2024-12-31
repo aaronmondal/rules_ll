@@ -17,7 +17,13 @@ LlInfo = provider(
 LlCompilationDatabaseFragmentsInfo = provider(
     doc = "Stores compilation database fragments.",
     fields = {
-        "cdfs": "A `depset` of compilation database fragments.",
+        "cdfs": """A `depset` of compilation database fragments emitted by the
+rule.""",
+        "transitive_cdfs": """A `depset` of compilation database fragments
+emitted by the rule and its depencies.""",
+        "inputs": """A `depset` of the files required when running clang-tidy on
+a cdb containing the cdfs.
+        """,
     },
 )
 

@@ -91,11 +91,6 @@ def _ll_library_impl(ctx):
     if "objects" in ctx.attr.emit:
         out_files += intermediary_objects
 
-    transitive_cdfs = [
-        dep[LlCompilationDatabaseFragmentsInfo].cdfs
-        for dep in ctx.attr.deps
-    ]
-
     return [
         DefaultInfo(
             files = depset(out_files),
@@ -118,7 +113,27 @@ def _ll_library_impl(ctx):
             exposed_bmis = depset(exposed_bmis + internal_bmis),
         ),
         LlCompilationDatabaseFragmentsInfo(
-            cdfs = depset(out_cdfs, transitive = transitive_cdfs),
+            cdfs = depset(out_cdfs),
+            # TODO(aaronmondal): This should ideally contain the toolchain files
+            #                    as well so that we don't need to duplicate them
+            #                    in lint toolchains. Currently this causes
+            #                    subtle errors, likely related to transition
+            #                    issues where toolchain files don't make it into
+            #                    the sandboxes of lint actions.
+            inputs = depset(
+                ctx.files.data +
+                ctx.files.srcs +
+                ctx.files.exposed_interfaces +
+                ctx.files.interfaces +
+                [bmistruct.bmi for bmistruct in exposed_bmis] +
+                [bmistruct.bmi for bmistruct in internal_bmis] +
+                [bmistruct.bmi for bmistruct in bmis.to_list()],
+                transitive = [headers],
+            ),
+            transitive_cdfs = depset(out_cdfs, transitive = [
+                dep[LlCompilationDatabaseFragmentsInfo].cdfs
+                for dep in ctx.attr.deps
+            ]),
         ),
         coverage_common.instrumented_files_info(
             ctx,
@@ -140,6 +155,7 @@ ll_library = rule(
     output_to_genfiles = True,
     incompatible_use_toolchain_transition = True,
     cfg = ll_transition,
+    provides = [LlInfo, LlCompilationDatabaseFragmentsInfo],
     toolchains = [
         "//ll:toolchain_type",
     ],
@@ -195,11 +211,6 @@ def _ll_binary_impl(ctx):
         in_files = intermediary_objects + ctx.files.deps,
     )
 
-    transitive_cdfs = [
-        dep[LlCompilationDatabaseFragmentsInfo].cdfs
-        for dep in ctx.attr.deps
-    ]
-
     runfiles = None
 
     if ctx.attr.compilation_mode == "hip_amdgpu":
@@ -213,7 +224,27 @@ def _ll_binary_impl(ctx):
             runfiles = runfiles,
         ),
         LlCompilationDatabaseFragmentsInfo(
-            cdfs = depset(out_cdfs, transitive = transitive_cdfs),
+            cdfs = depset(out_cdfs),
+            # TODO(aaronmondal): This should ideally contain the toolchain files
+            #                    as well so that we don't need to duplicate them
+            #                    in lint toolchains. Currently this causes
+            #                    subtle errors, likely related to transition
+            #                    issues where toolchain files don't make it into
+            #                    the sandboxes of lint actions.
+            inputs = depset(
+                ctx.files.data +
+                ctx.files.srcs +
+                ctx.files.exposed_interfaces +
+                ctx.files.interfaces +
+                [bmistruct.bmi for bmistruct in exposed_bmis] +
+                [bmistruct.bmi for bmistruct in internal_bmis] +
+                [bmistruct.bmi for bmistruct in bmis.to_list()],
+                transitive = [headers],
+            ),
+            transitive_cdfs = depset(out_cdfs, transitive = [
+                dep[LlCompilationDatabaseFragmentsInfo].cdfs
+                for dep in ctx.attr.deps
+            ]),
         ),
         coverage_common.instrumented_files_info(
             ctx,
@@ -233,6 +264,7 @@ ll_binary = rule(
     executable = True,
     attrs = LL_BINARY_ATTRS,
     cfg = ll_transition,
+    provides = [LlCompilationDatabaseFragmentsInfo],
     toolchains = [
         "//ll:toolchain_type",
     ],
@@ -254,6 +286,7 @@ ll_test = rule(
     test = True,
     attrs = LL_BINARY_ATTRS,
     cfg = ll_transition,
+    provides = [LlCompilationDatabaseFragmentsInfo],
     toolchains = [
         "//ll:toolchain_type",
     ],

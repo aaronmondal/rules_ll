@@ -1,0 +1,3 @@
+# Placeholder for a .clang-tidy config.
+#
+# It is an error to not override this file with an explicit .clang-tidy config.

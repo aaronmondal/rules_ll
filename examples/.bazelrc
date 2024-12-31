@@ -48,6 +48,9 @@ build --remote_instance_name=main
 # repository we need to reference the file from the parent directory.
 try-import %workspace%/../ll.bazelrc
 
+test --aspects @rules_ll//ll:clang_tidy.bzl%clang_tidy_aspect
+test --@rules_ll//ll:clang_tidy_config=//:.clang-tidy
+
 # Nix-generated flags for LRE.
 try-import %workspace%/../lre.bazelrc
 

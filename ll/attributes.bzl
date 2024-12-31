@@ -370,18 +370,6 @@ LL_TOOLCHAIN_ATTRS = {
         cfg = transition_to_bootstrap,
         default = "@llvm-project//clang:clang",
     ),
-    "clang_tidy": attr.label(
-        doc = "The clang-tidy binary.",
-        cfg = transition_to_bootstrap,
-        default = "@llvm-project//clang-tools-extra/clang-tidy:clang-tidy",
-        executable = True,
-    ),
-    "clang_tidy_runner": attr.label(
-        doc = "The `run-clang-tidy.py` wrapper script for clang-tidy.",
-        cfg = transition_to_bootstrap,
-        default = "@llvm-project//clang-tools-extra/clang-tidy:run-clang-tidy",
-        executable = True,
-    ),
     "compiler_runtime": attr.label_list(
         doc = "The compiler runtime.",
         cfg = transition_to_bootstrap,
@@ -610,6 +598,81 @@ LL_TOOLCHAIN_ATTRS = {
     ),
     "LL_CUDA_NVCC_LDFLAGS": attr.label(
         doc = "Link flags used by the `cuda_nvptx_nvcc` toolchain.",
+    ),
+}
+
+LL_LINT_TOOLCHAIN_ATTRS = {
+    "clang_tidy_wrapper": attr.label(
+        doc = "The clang-tidy wrapper script.",
+        cfg = transition_to_bootstrap,
+        default = "@rules_ll//ll:clang-tidy-wrapper",
+        executable = True,
+    ),
+    "cdb_merger": attr.label(
+        doc = "The cdb-merger script.",
+        cfg = transition_to_bootstrap,
+        default = "@rules_ll//ll:cdb-merger",
+        executable = True,
+    ),
+    "builtin_includes": attr.label(
+        doc = "Clang's built-in header files.",
+        cfg = "target",
+        default = "@llvm-project//clang:builtin_headers_gen",
+    ),
+    "symbolizer": attr.label(
+        doc = "The `llvm-symbolizer`.",
+        cfg = transition_to_bootstrap,
+        default = "@llvm-project//llvm:llvm-symbolizer",
+        executable = True,
+    ),
+    "cpp_abihdrs": attr.label(
+        doc = "The C++ ABI headers.",
+        cfg = transition_to_bootstrap,
+    ),
+    "cpp_stdhdrs": attr.label(
+        doc = "The C++ standard library headers.",
+        allow_files = True,
+        # Don't transition for now. It breaks the generated config.
+    ),
+    "cpp_stdlib": attr.label(
+        doc = "The C++ standard library.",
+        cfg = transition_to_bootstrap,
+        default = "@llvm-project//libcxx",
+        providers = [LlInfo],
+    ),
+    "hip_runtime": attr.label_list(
+        doc = "The libamdhip64 runtime.",
+        # default = "@hipamd//:libamdhip64",
+        cfg = transition_to_cpp,
+    ),
+    "hip_libraries": attr.label_list(
+        doc = """The HIP libraries.
+
+        `rules_ll` still uses `clang` to compile device code.
+
+        Using this implies acceptance of the AMD's license for HIP.
+
+        Using HIP to target Nvidia devices implies use of the Nvidia CUDA
+        toolkit.
+        """,
+        # default = [
+        #     "@hip//:headers",
+        #     "@hipamd//:headers",
+        # ],
+        cfg = transition_to_cpp,
+    ),
+    "llvm_project_deps": attr.label_list(
+        doc = """Targets from the `llvm-project-overlay`.
+
+        Useful for targets that depend on the `llvm-project`. For instance
+        frontend actions and Clang plugins.
+        """,
+        cfg = transition_to_bootstrap,
+        default = LLVM_PROJECT_DEPS,
+    ),
+    "toolchain_configuration": attr.label(
+        doc = """TODO""",
+        default = "//ll:current_ll_toolchain_configuration",
     ),
 }
 

@@ -2,9 +2,27 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@stardoc//stardoc:stardoc.bzl", "stardoc")
-load("//ll:toolchain.bzl", "ll_toolchain")
+load("//ll:toolchain.bzl", "ll_lint_toolchain", "ll_toolchain")
 load("//ll:transitions.bzl", "COMPILATION_MODES")
+
+sh_binary(
+    name = "cdb-merger",
+    srcs = ["cdb-merger.sh"],
+)
+
+sh_binary(
+    name = "clang-tidy-wrapper",
+    srcs = ["clang-tidy-wrapper.sh"],
+    data = [
+        ":cdb-merger",
+        "@llvm-project//clang-tools-extra/clang-tidy:clang-tidy",
+    ],
+    deps = [
+        "@rules_shell//shell/runfiles",
+    ],
+)
 
 LL_MODULES = [
     "actions",
@@ -104,9 +122,17 @@ string_flag(
     ]
 ]
 
+label_flag(
+    name = "clang_tidy_config",
+    build_setting_default = "unset-clang-tidy-config",
+    visibility = ["//visibility:public"],
+)
+
 # Toolchain Types.
 
 toolchain_type(name = "toolchain_type")
+
+toolchain_type(name = "lint_toolchain_type")
 
 # Toolchains.
 
@@ -254,5 +280,46 @@ toolchain(
     ],
     toolchain = ":ll_toolchain_x86_64-unknown-linux-gnu",
     toolchain_type = ":toolchain_type",
+    visibility = ["//visibility:public"],
+)
+
+ll_lint_toolchain(
+    name = "ll_lint_toolchain_x86_64-unknown-linux-gnu",
+    cpp_abihdrs = select({
+        ":bootstrap": None,
+        ":cuda_nvptx_nvcc": None,
+        "//conditions:default": "@llvm-project//libcxxabi:headers",
+    }),
+    cpp_stdhdrs = select({
+        ":bootstrap": None,
+        ":cuda_nvptx_nvcc": None,
+        "//conditions:default": "@llvm-project//libcxx:headers",
+    }),
+    hip_libraries = select({
+        ":hip_amdgpu": [
+            "@hip//:headers",
+            "@clr//:hipamd_headers",
+        ],
+        ":hip_nvptx": [
+            "@hip//:headers",
+            "@clr//:hipamd_headers",
+        ],
+        "//conditions:default": [],
+    }),
+    hip_runtime = select({
+        ":hip_amdgpu": ["@clr//:libamdhip64"],
+        "//conditions:default": [],
+    }),
+)
+
+toolchain(
+    name = "ll_lint_toolchain",
+    exec_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+        "@bazel_tools//tools/cpp:clang",
+    ],
+    toolchain = ":ll_lint_toolchain_x86_64-unknown-linux-gnu",
+    toolchain_type = ":lint_toolchain_type",
     visibility = ["//visibility:public"],
 )

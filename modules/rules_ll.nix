@@ -13,6 +13,7 @@ let
     # include these flags when running Bazel in a nix environment.
 
     build --extra_toolchains=@rules_ll//ll:ll_toolchain
+    build --extra_toolchains=@rules_ll//ll:ll_lint_toolchain
 
     ${lib.concatLines processedActionEnvs}' >$out
   '';

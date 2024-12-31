@@ -30,6 +30,7 @@ Checks: |
   -misc-uniqueptr-reset-release
   -modernize-make-shared
   -modernize-make-unique
+  -modernize-min-max-use-initializer-list
   -modernize-use-nullptr
   -modernize-use-transparent-functors
   -performance-avoid-endl
@@ -38,10 +39,12 @@ Checks: |
   -performance-move-const-arg
   -performance-unnecessary-value-param
   -portability-std-allocator-const
+  -readability-implicit-bool-conversion
   -readability-redundant-declaration
   -readability-redundant-smartptr-get
   -readability-redundant-string-cstr
   -readability-redundant-string-init
+  -readability-string-compare
   -readability-uppercase-literal-suffix
 
 # Note: misc-include-cleaner is pointless with modules and doesn't work well

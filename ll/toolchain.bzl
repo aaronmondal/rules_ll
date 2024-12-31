@@ -4,7 +4,7 @@ This file declares the `ll_toolchain` rule.
 """
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
-load("//ll:attributes.bzl", "LL_TOOLCHAIN_ATTRS")
+load("//ll:attributes.bzl", "LL_LINT_TOOLCHAIN_ATTRS", "LL_TOOLCHAIN_ATTRS")
 load("//ll:providers.bzl", "LlInfo")
 
 def _ll_toolchain_impl(ctx):
@@ -57,8 +57,6 @@ def _ll_toolchain_impl(ctx):
             llvm_project_artifacts = llvm_project_artifacts,
             objcopy = ctx.executable.objcopy,
             opt = ctx.executable.opt,
-            clang_tidy = ctx.executable.clang_tidy,
-            clang_tidy_runner = ctx.executable.clang_tidy_runner,
             rocm_device_libs = ctx.files.rocm_device_libs,
             symbolizer = ctx.executable.symbolizer,
             machine_code_tool = ctx.executable.machine_code_tool,
@@ -81,4 +79,37 @@ ll_toolchain = rule(
     implementation = _ll_toolchain_impl,
     executable = False,
     attrs = LL_TOOLCHAIN_ATTRS,
+)
+
+def _ll_lint_toolchain_impl(ctx):
+    std_modules = []
+    for target in ctx.attr.cpp_stdlib:
+        std_modules += target[LlInfo].exposed_bmis.to_list()
+
+    llvm_project_sources = depset(transitive = [
+        data[OutputGroupInfo].compilation_prerequisites_INTERNAL_
+        for data in ctx.attr.llvm_project_deps
+    ])
+
+    return [
+        platform_common.ToolchainInfo(
+            builtin_includes = ctx.files.builtin_includes,
+            cdb_merger = ctx.executable.cdb_merger,
+            # TODO(aaronmondal): As of Bazel 8 ctx.executable doesn't work here.
+            #                    Try again after bazel 8.1.0.
+            clang_tidy_wrapper = ctx.attr.clang_tidy_wrapper,
+            cpp_abihdrs = ctx.files.cpp_abihdrs,
+            cpp_stdhdrs = ctx.files.cpp_stdhdrs,
+            cpp_stdmodules = std_modules,
+            hip_libraries = ctx.files.hip_libraries,
+            hip_runtime = ctx.files.hip_runtime,
+            llvm_project_sources = llvm_project_sources,
+            symbolizer = ctx.executable.symbolizer,
+        ),
+    ]
+
+ll_lint_toolchain = rule(
+    implementation = _ll_lint_toolchain_impl,
+    executable = False,
+    attrs = LL_LINT_TOOLCHAIN_ATTRS,
 )

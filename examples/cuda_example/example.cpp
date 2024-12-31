@@ -18,7 +18,7 @@ constexpr void cuda_assert(const T value) {
 
 __global__ void add_vector(float *input_a, const float *input_b,
                            const int dimension) {
-  const uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
+  const uint32_t index = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (index < dimension) {
     // NOLINTNEXTLINE cppcoreguidelines-pro-bounds-pointer-arithmetic
     input_a[index] += input_b[index];
